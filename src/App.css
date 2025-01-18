@@ -1,0 +1,11 @@
+.app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* Define app left and app right to have equal width */
+.app-side {
+  flex: 1;
+  display: flex;
+}
