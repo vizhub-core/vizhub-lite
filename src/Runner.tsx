@@ -3,9 +3,11 @@ import { VizFiles } from "@vizhub/viz-types";
 import "./Runner.css";
 
 export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
+  // Track when the service worker is ready
   const [swReady, setSwReady] = useState(false);
 
-  console.log(vizFiles);
+  // A unique key to force the iframe to reload
+  const [iframeKey, setIframeKey] = useState(0);
 
   // 1) Register the service worker once
   useEffect(() => {
@@ -32,6 +34,10 @@ export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
         payload: vizFiles,
       });
     }
+
+    // Bump the iframe key to force a re-render
+    // TODO only if hot reloading is not supported
+    setIframeKey((prev) => prev + 1);
   }, [vizFiles, swReady]);
 
   // 3) Check if we have a file named "index.html" among the entries
@@ -46,11 +52,7 @@ export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
   return (
     <div className="runner">
       {iframeSrc ? (
-        <iframe
-          src={iframeSrc}
-          title="Runner iframe"
-          style={{ width: "100%", height: "400px", border: "1px solid #ccc" }}
-        />
+        <iframe key={iframeKey} src={iframeSrc} />
       ) : (
         <p>
           No file named <code>index.html</code> found in your{" "}
