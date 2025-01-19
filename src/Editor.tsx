@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
@@ -11,8 +11,9 @@ import { css } from "@codemirror/lang-css";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { parseMarkdownFiles } from "llm-code-format";
-import doc from "./exampleContent.md?raw";
+
 import "./Editor.css";
+import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
 
 const mixedHTMLParser = htmlParser.configure({
   wrap: parseMixed((node) => {
@@ -20,9 +21,13 @@ const mixedHTMLParser = htmlParser.configure({
   }),
 });
 
+// Support for mixed HTML and JavaScript
+// within Markdown HTML code fences
 const mixedHTML = LRLanguage.define({ parser: mixedHTMLParser });
 const mixedHTMLSupport = new LanguageSupport(mixedHTML);
 
+// Define the supported code languages
+// for Markdown code fences
 const codeLanguages = [
   LanguageDescription.of({
     name: "JavaScript",
@@ -49,16 +54,38 @@ const codeLanguages = [
 ];
 
 export const Editor = ({
+  doc,
   onCodeChange,
 }: {
-  onCodeChange: (files: { name: string; text: string }[]) => void;
+  // The initial content of the editor
+  doc: string;
+  // Called whenever the content of the editor is run
+  // with Ctrl + S, Ctrl + Enter, or Shift + Enter.
+  // Also called on first render.
+  onCodeChange: (vizFiles: VizFiles) => void;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
+  // Convert Markdown content to VizFiles and run it
+  const runContent = useCallback((content: string) => {
+    const { files } = parseMarkdownFiles(content);
+    const vizFiles: VizFiles = files.reduce((acc, file) => {
+      const id = generateVizFileId();
+      acc[id] = { name: file.name, text: file.text };
+      return acc;
+    }, {} as VizFiles);
+    onCodeChange(vizFiles);
+  }, []);
+
+  // Set up the CodeMirror editor
   useEffect(() => {
+    // Handle first run
+    runContent(doc);
+
+    // Get latest content from CodeMirror and run it
     const run = (view: EditorView) => {
-      const content = view.state.doc.toString();
-      onCodeChange(parseMarkdownFiles(content).files);
+      const content: string = view.state.doc.toString();
+      runContent(content);
       return true;
     };
 
@@ -74,19 +101,26 @@ export const Editor = ({
     // The "Mod-Enter" won't work without this
     const highPrecedenceKeymap = Prec.high(customKeymap);
 
+    // Create the CodeMirror editor
     const editor = new EditorView({
       doc,
       extensions: [
         basicSetup,
+        // Support nested languages
+        // in Markdown code fences
         markdown({
           codeLanguages,
           defaultCodeLanguage: javascript(),
         }),
+
+        // Apply the custom keymap for running the code
+        // (Ctrl + S, Ctrl + Enter, Shift + Enter)
         highPrecedenceKeymap,
       ],
       parent: ref.current!,
     });
 
+    // Clean up the editor on unmount
     return () => {
       editor.destroy();
     };

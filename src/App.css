@@ -8,4 +8,7 @@
 .app-side {
   flex: 1;
   display: flex;
+
+  /* This makes each side take up half width even when empty */
+  min-width: 0;
 }
