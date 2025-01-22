@@ -11,6 +11,7 @@ import { css } from "@codemirror/lang-css";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 import { parseMarkdownFiles } from "llm-code-format";
+import { vizhubTheme } from "@vizhub/codemirror-theme";
 
 import "./Editor.css";
 import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
@@ -106,6 +107,8 @@ export const Editor = ({
       doc,
       extensions: [
         basicSetup,
+        // Enable line wrapping
+        EditorView.lineWrapping,
         // Support nested languages
         // in Markdown code fences
         markdown({
@@ -116,6 +119,8 @@ export const Editor = ({
         // Apply the custom keymap for running the code
         // (Ctrl + S, Ctrl + Enter, Shift + Enter)
         highPrecedenceKeymap,
+
+        vizhubTheme,
       ],
       parent: ref.current!,
     });
