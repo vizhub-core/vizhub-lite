@@ -29,6 +29,18 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SET_VIZ_FILES") {
     VIZ_FILES = event.data.payload || {};
+    // Send acknowledgment back to all clients
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "VIZ_FILES_RECEIVED",
+        });
+      });
+    });
+  }
+  // Add handling for claiming clients
+  else if (event.data && event.data.type === "CLAIM_CLIENTS") {
+    self.clients.claim();
   }
 });
 

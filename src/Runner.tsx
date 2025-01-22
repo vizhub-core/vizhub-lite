@@ -1,42 +1,78 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { VizFiles } from "@vizhub/viz-types";
 import "./Runner.css";
 
 export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
-  // Track when the service worker is ready
   const [swReady, setSwReady] = useState(false);
-
-  // A unique key to force the iframe to reload
+  const [filesReceived, setFilesReceived] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+
+  // Keep a ref to the active service worker
+  const swRef = useRef<ServiceWorker | null>(null);
 
   // 1) Register the service worker once
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/service-worker.js", { scope: "/" })
-        .then(() => navigator.serviceWorker.ready)
-        .then(() => {
-          console.log("SW is active");
-          setSwReady(true);
+        .then(async (registration) => {
+          // Wait for the service worker to be ready
+          await navigator.serviceWorker.ready;
+
+          // Store reference to whichever is available
+          if (navigator.serviceWorker.controller) {
+            swRef.current = navigator.serviceWorker.controller;
+          } else if (registration.active) {
+            swRef.current = registration.active;
+            // Force the active service worker to take control
+            registration.active.postMessage({ type: "CLAIM_CLIENTS" });
+          }
+
+          if (swRef.current) {
+            setSwReady(true);
+          } else {
+            console.warn("Unable to find attached Service Worker!");
+          }
         })
         .catch(console.error);
     }
   }, []);
+
+  // Listen for acknowledgment from service worker
+  useEffect(() => {
+    // Wait for the service worker to be ready
+    if (!swReady) return;
+
+    const messageHandler = (event: MessageEvent) => {
+      if (event.data && event.data.type === "VIZ_FILES_RECEIVED") {
+        setFilesReceived(true);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", messageHandler);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", messageHandler);
+    };
+  }, [swReady]);
 
   // 2) Whenever vizFiles changes & SW is ready,
   // post them to the SW
   useEffect(() => {
     if (!swReady) return;
 
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
+    if (swRef.current) {
+      // Reset filesReceived when sending new files
+      setFilesReceived(false);
+
+      swRef.current.postMessage({
         type: "SET_VIZ_FILES",
         payload: vizFiles,
       });
+    } else {
+      console.warn("No service worker reference available");
     }
 
     // Bump the iframe key to force a re-render
-    // TODO only if hot reloading is not supported
     setIframeKey((prev) => prev + 1);
   }, [vizFiles, swReady]);
 
@@ -49,28 +85,13 @@ export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
   // We'll load /index.html if it exists
   const iframeSrc = hasIndexHtml ? "/index.html" : undefined;
 
+  // Wait for initialization of the service worker,
+  // otherwise the iframe will render what the server actually serves.
+  const shouldRenderIframe = swReady && iframeSrc && filesReceived;
+
   return (
     <div className="runner">
-      {iframeSrc ? (
-        <iframe key={iframeKey} src={iframeSrc} />
-      ) : (
-        <p>
-          No file named <code>index.html</code> found in your{" "}
-          <code>vizFiles</code>.
-        </p>
-      )}
+      {shouldRenderIframe ? <iframe key={iframeKey} src={iframeSrc} /> : null}
     </div>
   );
 };
-
-// import { VizFiles } from "@vizhub/viz-types";
-// import "./Runner.css";
-// export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
-//   const srcDoc = "";
-
-//   return (
-//     <div className="runner">
-//       <iframe srcDoc={srcDoc} />
-//     </div>
-//   );
-// };
