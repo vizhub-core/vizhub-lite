@@ -51,11 +51,8 @@ self.addEventListener("fetch", (event) => {
 
   // Only intercept same-origin requests
   if (url.origin === self.location.origin) {
-    // Strip out base path and leading slash
-    // e.g. /vizhub-lite/index.html => "index.html"
-    const path = url.pathname
-      .replace(/^\/vizhub-lite\//, "")
-      .replace(/^\//, "");
+    // Isolate the file name at the end of the path
+    const path = url.pathname.split("/").pop();
 
     // Find a file in VIZ_FILES whose .name matches path
     const fileId = Object.keys(VIZ_FILES).find((fid) => {

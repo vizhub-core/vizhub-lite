@@ -83,7 +83,7 @@ export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
   );
 
   // We'll load /index.html if it exists
-  const iframeSrc = hasIndexHtml ? "/index.html" : undefined;
+  const iframeSrc = hasIndexHtml ? "./index.html" : undefined;
 
   // Wait for initialization of the service worker,
   // otherwise the iframe will render what the server actually serves.
