@@ -14,7 +14,7 @@ export const Runner = ({ vizFiles }: { vizFiles: VizFiles }) => {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/service-worker.js", { scope: "/" })
+        .register("./service-worker.js", { scope: "./" })
         .then(async (registration) => {
           // Wait for the service worker to be ready
           await navigator.serviceWorker.ready;
