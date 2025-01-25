@@ -1,6 +1,8 @@
 # vizhub-lite
 
-![image](https://github.com/user-attachments/assets/bd83507f-4e29-497d-8ef5-df3f774d7102)
+Live demo: https://vizhub-core.github.io/vizhub-lite/
+
+[![image](https://github.com/user-attachments/assets/bd83507f-4e29-497d-8ef5-df3f774d7102)](https://vizhub-core.github.io/vizhub-lite/)
 
 An editing environment for Markdown with embedded code files, where you can run the code while you edit. Supports vanilla HTML & JS.
 
