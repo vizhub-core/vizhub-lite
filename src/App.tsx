@@ -28,6 +28,7 @@ export const App = () => {
 
   const onCopyClicked = useCallback(async () => {
     const content = editorRef.current?.getContent();
+
     if (content) {
       await navigator.clipboard.writeText(content);
       setCopyButtonText("Copied!");
@@ -55,14 +56,31 @@ export const App = () => {
     const clipboardText = await navigator.clipboard.readText();
     const currentContent = editorRef.current?.getContent() || "";
     const newContent = currentContent + "\n\n" + clipboardText;
-    editorRef.current?.setContent(newContent);
-    runContent(newContent);
 
     // Then consolidate
     const consolidated = serializeMarkdownFiles(Object.values(vizFiles));
-    runContent(consolidated || "");
     editorRef.current?.setContent(consolidated);
+
+    // Then run
+    runContent(newContent);
+    runContent(consolidated || "");
   }, [vizFiles]);
+
+  // TODO make this convert to files and download a .zip
+  const onDownloadClicked = useCallback(() => {
+    const content = editorRef.current?.getContent();
+    if (content) {
+      const blob = new Blob([content], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "content.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, []);
 
   return (
     <div className="app">
@@ -74,6 +92,7 @@ export const App = () => {
           <Button onClick={onPasteAndConsolidateClicked}>
             Paste & Consolidate
           </Button>
+          <Button onClick={onDownloadClicked}>Download</Button>
           <span
             style={{
               display: "flex",
