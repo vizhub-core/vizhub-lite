@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useImperativeHandle,
-  forwardRef,
-} from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";

@@ -1,6 +1,6 @@
 import { Editor, EditorHandle } from "./Editor";
 import { Runner } from "./Runner";
-import { useCallback, useState, useRef, useMemo } from "react";
+import { useCallback, useState, useRef } from "react";
 import { format } from "d3-format";
 import { Button } from "./Button";
 import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
