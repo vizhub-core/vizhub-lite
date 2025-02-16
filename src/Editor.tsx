@@ -56,6 +56,7 @@ const codeLanguages = [
 
 export interface EditorHandle {
   setContent: (content: string) => void;
+  getContent: () => string | undefined;
 }
 
 export const Editor = forwardRef<EditorHandle, {
@@ -76,6 +77,9 @@ export const Editor = forwardRef<EditorHandle, {
           }
         });
       }
+    },
+    getContent: () => {
+      return editorViewRef.current?.state.doc.toString();
     }
   }));
 
