@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
@@ -10,11 +16,8 @@ import { LRLanguage } from "@codemirror/language";
 import { css } from "@codemirror/lang-css";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
-import { parseMarkdownFiles } from "llm-code-format";
 import { vizhubTheme } from "@vizhub/codemirror-theme";
-
 import "./Editor.css";
-import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
 
 const mixedHTMLParser = htmlParser.configure({
   wrap: parseMixed((node) => {
@@ -59,10 +62,13 @@ export interface EditorHandle {
   getContent: () => string | undefined;
 }
 
-export const Editor = forwardRef<EditorHandle, {
-  doc: string;
-  onCodeChange: (vizFiles: VizFiles) => void;
-}>(({ doc, onCodeChange }, ref) => {
+export const Editor = forwardRef<
+  EditorHandle,
+  {
+    doc: string;
+    runContent: (content: string) => void;
+  }
+>(({ doc, runContent }, ref) => {
   const divRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
 
@@ -73,26 +79,15 @@ export const Editor = forwardRef<EditorHandle, {
           changes: {
             from: 0,
             to: editorViewRef.current.state.doc.length,
-            insert: content
-          }
+            insert: content,
+          },
         });
       }
     },
     getContent: () => {
       return editorViewRef.current?.state.doc.toString();
-    }
+    },
   }));
-
-  // Convert Markdown content to VizFiles and run it
-  const runContent = useCallback((content: string) => {
-    const { files } = parseMarkdownFiles(content);
-    const vizFiles: VizFiles = files.reduce((acc, file) => {
-      const id = generateVizFileId();
-      acc[id] = { name: file.name, text: file.text };
-      return acc;
-    }, {} as VizFiles);
-    onCodeChange(vizFiles);
-  }, []);
 
   // Set up the CodeMirror editor
   useEffect(() => {

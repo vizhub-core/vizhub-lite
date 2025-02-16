@@ -2,8 +2,8 @@ import { Editor, EditorHandle } from "./Editor";
 import { Runner } from "./Runner";
 import { useCallback, useState, useRef } from "react";
 import { Button } from "./Button";
-import { VizFiles } from "@vizhub/viz-types";
-import { serializeMarkdownFiles } from "llm-code-format";
+import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
+import { parseMarkdownFiles, serializeMarkdownFiles } from "llm-code-format";
 import doc from "./exampleContent.md?raw";
 import "./App.css";
 
@@ -12,7 +12,13 @@ export const App = () => {
   const [copyButtonText, setCopyButtonText] = useState("Copy");
   const editorRef = useRef<EditorHandle>(null);
 
-  const onCodeChange = useCallback((vizFiles: VizFiles) => {
+  const runContent = useCallback((content: string) => {
+    const { files } = parseMarkdownFiles(content);
+    const vizFiles: VizFiles = files.reduce((acc, file) => {
+      const id = generateVizFileId();
+      acc[id] = { name: file.name, text: file.text };
+      return acc;
+    }, {} as VizFiles);
     setVizFiles(vizFiles);
   }, []);
 
@@ -28,7 +34,10 @@ export const App = () => {
   const onPasteClicked = useCallback(async () => {
     const clipboardText = await navigator.clipboard.readText();
     const currentContent = editorRef.current?.getContent() || "";
-    editorRef.current?.setContent(currentContent + "\n\n" + clipboardText);
+    const content = currentContent + "\n\n" + clipboardText;
+    editorRef.current?.setContent(content);
+
+    runContent(content || "");
   }, []);
 
   const onConsolidateClicked = useCallback(() => {
@@ -44,7 +53,7 @@ export const App = () => {
           <Button onClick={onPasteClicked}>Paste</Button>
           <Button onClick={onConsolidateClicked}>Consolidate</Button>
         </div>
-        <Editor ref={editorRef} doc={doc} onCodeChange={onCodeChange} />
+        <Editor ref={editorRef} doc={doc} runContent={runContent} />
       </div>
       <div className="app-side">
         <Runner vizFiles={vizFiles} />
