@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
@@ -54,18 +54,30 @@ const codeLanguages = [
   }),
 ];
 
-export const Editor = ({
-  doc,
-  onCodeChange,
-}: {
-  // The initial content of the editor
+export interface EditorHandle {
+  setContent: (content: string) => void;
+}
+
+export const Editor = forwardRef<EditorHandle, {
   doc: string;
-  // Called whenever the content of the editor is run
-  // with Ctrl + S, Ctrl + Enter, or Shift + Enter.
-  // Also called on first render.
   onCodeChange: (vizFiles: VizFiles) => void;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
+}>(({ doc, onCodeChange }, ref) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const editorViewRef = useRef<EditorView | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setContent: (content: string) => {
+      if (editorViewRef.current) {
+        editorViewRef.current.dispatch({
+          changes: {
+            from: 0,
+            to: editorViewRef.current.state.doc.length,
+            insert: content
+          }
+        });
+      }
+    }
+  }));
 
   // Convert Markdown content to VizFiles and run it
   const runContent = useCallback((content: string) => {
@@ -122,14 +134,17 @@ export const Editor = ({
 
         vizhubTheme,
       ],
-      parent: ref.current!,
+      parent: divRef.current!,
     });
 
     // Clean up the editor on unmount
+    editorViewRef.current = editor;
+
     return () => {
+      editorViewRef.current = null;
       editor.destroy();
     };
   }, []);
 
-  return <div ref={ref} className="editor" />;
-};
+  return <div ref={divRef} className="editor" />;
+});

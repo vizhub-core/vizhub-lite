@@ -1,31 +1,34 @@
-import { Editor } from "./Editor";
+import { Editor, EditorHandle } from "./Editor";
 import { Runner } from "./Runner";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
+import { Button } from "./Button";
 import { VizFiles } from "@vizhub/viz-types";
+import { serializeMarkdownFiles } from "llm-code-format";
 import doc from "./exampleContent.md?raw";
 import "./App.css";
 
-// export type VizFileId = string;
-// export type VizFiles = {
-//     [fileId: VizFileId]: VizFile;
-// };
-// export type VizFile = {
-//     name: string;
-//     text: string;
-// };
-// export declare const generateVizFileId: () => VizFileId;
-
 export const App = () => {
   const [vizFiles, setVizFiles] = useState<VizFiles>({});
+  const editorRef = useRef<EditorHandle>(null);
 
   const onCodeChange = useCallback((vizFiles: VizFiles) => {
     setVizFiles(vizFiles);
   }, []);
 
+  const onConsolidateClicked = useCallback(() => {
+    const consolidated = serializeMarkdownFiles(Object.values(vizFiles));
+    editorRef.current?.setContent(consolidated);
+  }, [vizFiles]);
+
   return (
     <div className="app">
       <div className="app-side">
-        <Editor doc={doc} onCodeChange={onCodeChange} />
+        <div className="button-row">
+          <Button onClick={() => console.log("Copy clicked")}>Copy</Button>
+          <Button onClick={() => console.log("Paste clicked")}>Paste</Button>
+          <Button onClick={onConsolidateClicked}>Consolidate</Button>
+        </div>
+        <Editor ref={editorRef} doc={doc} onCodeChange={onCodeChange} />
       </div>
       <div className="app-side">
         <Runner vizFiles={vizFiles} />
