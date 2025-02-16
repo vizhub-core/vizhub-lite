@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
@@ -10,11 +16,8 @@ import { LRLanguage } from "@codemirror/language";
 import { css } from "@codemirror/lang-css";
 import { keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
-import { parseMarkdownFiles } from "llm-code-format";
 import { vizhubTheme } from "@vizhub/codemirror-theme";
-
 import "./Editor.css";
-import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
 
 const mixedHTMLParser = htmlParser.configure({
   wrap: parseMixed((node) => {
@@ -54,29 +57,37 @@ const codeLanguages = [
   }),
 ];
 
-export const Editor = ({
-  doc,
-  onCodeChange,
-}: {
-  // The initial content of the editor
-  doc: string;
-  // Called whenever the content of the editor is run
-  // with Ctrl + S, Ctrl + Enter, or Shift + Enter.
-  // Also called on first render.
-  onCodeChange: (vizFiles: VizFiles) => void;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
+export interface EditorHandle {
+  setContent: (content: string) => void;
+  getContent: () => string | undefined;
+}
 
-  // Convert Markdown content to VizFiles and run it
-  const runContent = useCallback((content: string) => {
-    const { files } = parseMarkdownFiles(content);
-    const vizFiles: VizFiles = files.reduce((acc, file) => {
-      const id = generateVizFileId();
-      acc[id] = { name: file.name, text: file.text };
-      return acc;
-    }, {} as VizFiles);
-    onCodeChange(vizFiles);
-  }, []);
+export const Editor = forwardRef<
+  EditorHandle,
+  {
+    doc: string;
+    runContent: (content: string) => void;
+  }
+>(({ doc, runContent }, ref) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const editorViewRef = useRef<EditorView | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setContent: (content: string) => {
+      if (editorViewRef.current) {
+        editorViewRef.current.dispatch({
+          changes: {
+            from: 0,
+            to: editorViewRef.current.state.doc.length,
+            insert: content,
+          },
+        });
+      }
+    },
+    getContent: () => {
+      return editorViewRef.current?.state.doc.toString();
+    },
+  }));
 
   // Set up the CodeMirror editor
   useEffect(() => {
@@ -122,14 +133,17 @@ export const Editor = ({
 
         vizhubTheme,
       ],
-      parent: ref.current!,
+      parent: divRef.current!,
     });
 
     // Clean up the editor on unmount
+    editorViewRef.current = editor;
+
     return () => {
+      editorViewRef.current = null;
       editor.destroy();
     };
   }, []);
 
-  return <div ref={ref} className="editor" />;
-};
+  return <div ref={divRef} className="editor" />;
+});

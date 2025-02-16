@@ -8,7 +8,15 @@
 .app-side {
   flex: 1;
   display: flex;
+  flex-direction: column;
 
   /* This makes each side take up half width even when empty */
   min-width: 0;
+}
+
+.button-row {
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #ccc;
 }

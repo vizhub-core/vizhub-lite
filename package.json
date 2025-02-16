@@ -19,6 +19,8 @@
     "@vizhub/codemirror-theme": "^0.3.0",
     "@vizhub/viz-types": "^0.0.1",
     "codemirror": "^6.0.1",
+    "d3-format": "^3.1.0",
+    "llama-tokenizer-js": "^1.2.2",
     "llm-code-format": "^0.1.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

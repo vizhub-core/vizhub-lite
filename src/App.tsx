@@ -1,31 +1,92 @@
-import { Editor } from "./Editor";
+import { Editor, EditorHandle } from "./Editor";
 import { Runner } from "./Runner";
-import { useCallback, useState } from "react";
-import { VizFiles } from "@vizhub/viz-types";
+import { useCallback, useState, useRef, useMemo } from "react";
+import { format } from "d3-format";
+import { Button } from "./Button";
+import { generateVizFileId, VizFiles } from "@vizhub/viz-types";
+import { parseMarkdownFiles, serializeMarkdownFiles } from "llm-code-format";
+import llamaTokenizer from "llama-tokenizer-js";
 import doc from "./exampleContent.md?raw";
 import "./App.css";
 
-// export type VizFileId = string;
-// export type VizFiles = {
-//     [fileId: VizFileId]: VizFile;
-// };
-// export type VizFile = {
-//     name: string;
-//     text: string;
-// };
-// export declare const generateVizFileId: () => VizFileId;
-
 export const App = () => {
   const [vizFiles, setVizFiles] = useState<VizFiles>({});
+  const [copyButtonText, setCopyButtonText] = useState("Copy");
+  const [tokenCount, setTokenCount] = useState(0);
+  const editorRef = useRef<EditorHandle>(null);
 
-  const onCodeChange = useCallback((vizFiles: VizFiles) => {
+  const runContent = useCallback((content: string) => {
+    setTokenCount(llamaTokenizer.encode(content).length);
+    const { files } = parseMarkdownFiles(content);
+    const vizFiles: VizFiles = files.reduce((acc, file) => {
+      const id = generateVizFileId();
+      acc[id] = { name: file.name, text: file.text };
+      return acc;
+    }, {} as VizFiles);
     setVizFiles(vizFiles);
   }, []);
+
+  const onCopyClicked = useCallback(async () => {
+    const content = editorRef.current?.getContent();
+    if (content) {
+      await navigator.clipboard.writeText(content);
+      setCopyButtonText("Copied!");
+      setTimeout(() => setCopyButtonText("Copy"), 2000);
+    }
+  }, []);
+
+  const onPasteClicked = useCallback(async () => {
+    const clipboardText = await navigator.clipboard.readText();
+    const currentContent = editorRef.current?.getContent() || "";
+    const content = currentContent + "\n\n" + clipboardText;
+    editorRef.current?.setContent(content);
+
+    runContent(content || "");
+  }, []);
+
+  const onConsolidateClicked = useCallback(() => {
+    const content = serializeMarkdownFiles(Object.values(vizFiles));
+    runContent(content || "");
+    editorRef.current?.setContent(content);
+  }, [vizFiles]);
+
+  const onPasteAndConsolidateClicked = useCallback(async () => {
+    // First paste
+    const clipboardText = await navigator.clipboard.readText();
+    const currentContent = editorRef.current?.getContent() || "";
+    const newContent = currentContent + "\n\n" + clipboardText;
+    editorRef.current?.setContent(newContent);
+    runContent(newContent);
+
+    // Then consolidate
+    const consolidated = serializeMarkdownFiles(Object.values(vizFiles));
+    runContent(consolidated || "");
+    editorRef.current?.setContent(consolidated);
+  }, [vizFiles]);
 
   return (
     <div className="app">
       <div className="app-side">
-        <Editor doc={doc} onCodeChange={onCodeChange} />
+        <div className="button-row">
+          <Button onClick={onCopyClicked}>{copyButtonText}</Button>
+          <Button onClick={onPasteClicked}>Paste</Button>
+          <Button onClick={onConsolidateClicked}>Consolidate</Button>
+          <Button onClick={onPasteAndConsolidateClicked}>
+            Paste & Consolidate
+          </Button>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginLeft: "10px",
+              fontFamily: "sans-serif",
+              fontSize: "14px",
+            }}
+          >
+            {format(",")(tokenCount)} tokens
+          </span>
+        </div>
+        <Editor ref={editorRef} doc={doc} runContent={runContent} />
       </div>
       <div className="app-side">
         <Runner vizFiles={vizFiles} />
