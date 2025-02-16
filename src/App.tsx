@@ -1,6 +1,6 @@
 import { Editor, EditorHandle } from "./Editor";
 import { Runner } from "./Runner";
-import { useCallback, useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef } from "react";
 import { Button } from "./Button";
 import { VizFiles } from "@vizhub/viz-types";
 import { serializeMarkdownFiles } from "llm-code-format";
@@ -16,6 +16,21 @@ export const App = () => {
     setVizFiles(vizFiles);
   }, []);
 
+  const onCopyClicked = useCallback(async () => {
+    const content = editorRef.current?.getContent();
+    if (content) {
+      await navigator.clipboard.writeText(content);
+      setCopyButtonText("Copied!");
+      setTimeout(() => setCopyButtonText("Copy"), 2000);
+    }
+  }, []);
+
+  const onPasteClicked = useCallback(async () => {
+    const clipboardText = await navigator.clipboard.readText();
+    const currentContent = editorRef.current?.getContent() || "";
+    editorRef.current?.setContent(currentContent + "\n\n" + clipboardText);
+  }, []);
+
   const onConsolidateClicked = useCallback(() => {
     const consolidated = serializeMarkdownFiles(Object.values(vizFiles));
     editorRef.current?.setContent(consolidated);
@@ -25,19 +40,8 @@ export const App = () => {
     <div className="app">
       <div className="app-side">
         <div className="button-row">
-          <Button
-            onClick={async () => {
-              const content = editorRef.current?.getContent();
-              if (content) {
-                await navigator.clipboard.writeText(content);
-                setCopyButtonText("Copied!");
-                setTimeout(() => setCopyButtonText("Copy"), 2000);
-              }
-            }}
-          >
-            {copyButtonText}
-          </Button>
-          <Button onClick={() => console.log("Paste clicked")}>Paste</Button>
+          <Button onClick={onCopyClicked}>{copyButtonText}</Button>
+          <Button onClick={onPasteClicked}>Paste</Button>
           <Button onClick={onConsolidateClicked}>Consolidate</Button>
         </div>
         <Editor ref={editorRef} doc={doc} onCodeChange={onCodeChange} />
